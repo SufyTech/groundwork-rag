@@ -1,5 +1,9 @@
 from embeddings import embedder
 from rank_bm25 import BM25Okapi
+from reranker import rerank
+from vector_store import get_chunk_texts
+from rank_bm25 import BM25Okapi
+
 def reciprocal_rank_fusion(vector_results, keyword_results, k=60):
     """
     vector_results: list of chunk ids, in order (best match first)
@@ -60,10 +64,35 @@ def hybrid_search(query_text, collection, bm25, ids, top_k=25):
     fused_results = reciprocal_rank_fusion(vector_results, keyword_results)
     return fused_results
 
+def search_and_rerank(query_text, collection, bm25, ids, top_k=5):
+    """
+    query_text: the user's search query
+    collection: ChromaDB collection object
+    bm25: pre-built BM25Okapi index
+    ids: list of all chunk ids (same order used to build bm25)
+    Returns: list of (chunk_id, score) — the final, best chunks after reranking
+    """
+    search_results = hybrid_search(query_text, collection, bm25, ids)
+    pulled_ids = [chunk_id for chunk_id, score in search_results]
+    chunks_text = get_chunk_texts(pulled_ids)  # Step C: call get_chunk_texts() with those pulled ids
+    reranked_results = rerank(query_text, chunks_text, top_k)
+    return reranked_results
+   
 class FakeBM25:
     def get_scores(self,query_words):
         return [0.5, 0.9, 0.1]
 
 if __name__ == "__main__":
-    print(keyword_search("test", FakeBM25(), ["A","B","C"]))
-    print(reciprocal_rank_fusion(["A","B","C"], ["B","A","C"]))
+    from vector_store import collection, get_chunk_texts
+
+    # Step 1: get all chunk texts and ids to build the bm25 index
+    all_data = collection.get()
+    all_ids = all_data['ids']
+    all_texts = all_data['documents']
+
+    # Step 2: build the bm25 index
+    bm25 = build_bm25_index(all_texts)
+
+    # Step 3: run search_and_rerank with a real query
+    results = search_and_rerank("Tell me about the sun", collection, bm25, all_ids)
+    print(results)
