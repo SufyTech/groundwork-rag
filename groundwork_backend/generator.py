@@ -2,11 +2,18 @@ import os
 from dotenv import load_dotenv
 from vector_store import get_chunk_texts
 from groq import Groq
+from langfuse import Langfuse, observe
 
 load_dotenv()
+langfuse = Langfuse(
+    public_key=os.environ.get("LANGFUSE_PUBLIC_KEY"),
+    secret_key=os.environ.get("LANGFUSE_SECRET_KEY"),
+    host=os.environ.get("LANGFUSE_HOST")
+)
 
 client = Groq(api_key=os.environ.get("GROQ_API_KEY"))
 
+@observe()
 def generate_answer(query_text, reranked_results):
     """
     query_text: the user's question
