@@ -1,9 +1,20 @@
+import os
+import requests
 from chunking import chunk_document
-from sentence_transformers import SentenceTransformer
-embedder = SentenceTransformer('all-MiniLM-L6-v2')
+from dotenv import load_dotenv
+load_dotenv()
+
+HF_TOKEN = os.environ.get("HF_TOKEN")
+API_URL = "https://router.huggingface.co/hf-inference/models/sentence-transformers/all-MiniLM-L6-v2/pipeline/feature-extraction"
+print("Token loaded:", HF_TOKEN[:5] if HF_TOKEN else "NOTHING FOUND")
 
 def embed_text(text: str):
-    return embedder.encode(text).tolist()
+    response = requests.post(
+        API_URL,
+        headers={"Authorization": f"Bearer {HF_TOKEN}"},
+        json={"inputs": text, "options": {"wait_for_model": True}},
+    )
+    return response.json()
 
 
 def embed_chunks(parent_chunks, source="unknown"):
