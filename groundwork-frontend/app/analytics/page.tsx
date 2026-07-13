@@ -20,7 +20,7 @@ type Stats = {
   top_questions: { question: string; count: number }[];
 };
 
-const API_BASE = "http://127.0.0.1:8000";
+const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000";
 
 function timeAgo(isoString: string): string {
   const then = new Date(isoString).getTime();

@@ -60,9 +60,11 @@ export default function ChatPage() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
+  const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000";
+
   async function loadDocuments() {
     try {
-      const res = await fetch("http://127.0.0.1:8000/documents");
+      const res = await fetch(`${API_BASE}/documents`);
       const data = await res.json();
       setDocs(data.documents || []);
     } catch (err) {
@@ -103,7 +105,7 @@ export default function ChatPage() {
     formData.append("file", file);
 
     try {
-      await fetch("http://127.0.0.1:8000/upload", {
+      await fetch(`${API_BASE}/upload`, {
         method: "POST",
         body: formData,
       });
@@ -130,7 +132,7 @@ export default function ChatPage() {
           ? `&sources=${encodeURIComponent(Array.from(selected).join(","))}`
           : "";
       const res = await fetch(
-        `http://127.0.0.1:8000/ask?question=${encodeURIComponent(question)}${sourcesParam}`,
+        `${API_BASE}/ask?question=${encodeURIComponent(question)}${sourcesParam}`,
       );
       const data = await res.json();
       setMessages((prev) => [
