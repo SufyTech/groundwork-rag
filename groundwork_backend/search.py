@@ -1,4 +1,4 @@
-from embeddings import embedder
+from embeddings import embed_text
 from rank_bm25 import BM25Okapi
 from reranker import rerank
 from vector_store import get_chunk_texts
@@ -31,7 +31,7 @@ def vector_search(query_text, collection, top_k=25, where=None):
     where: optional Chroma filter, e.g. {"source": {"$in": ["resume.pdf"]}}
     Returns: list of chunk ids, best vector match first
     """
-    query_embedding = embedder.encode(query_text).tolist()
+    query_embedding = embed_text(query_text)
     query_kwargs = {"query_embeddings": [query_embedding], "n_results": top_k}
     if where:
         query_kwargs["where"] = where

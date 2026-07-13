@@ -1,7 +1,5 @@
-torch
 fastapi
 uvicorn[standard]
-sentence-transformers
 chromadb
 rank_bm25
 groq
@@ -11,3 +9,4 @@ requests
 pypdf
 python-docx
 python-multipart
+cohere
