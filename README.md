@@ -15,7 +15,7 @@ Most "chat with your documents" tools give confident-sounding answers with no wa
 
 Built end-to-end — document ingestion, hybrid retrieval, reranking, cited generation, observability, and quantitative evaluation — as a fully working full-stack application, not a notebook demo.
 
-**Live demo:** _coming soon — deployment in progress_
+**Live demo:** https://groundwork-rag.onrender.com _(hosted on Render's free tier — first request may take ~30s to wake the server after inactivity)_
 
 ---
 
@@ -28,7 +28,7 @@ Document Upload
   Chunking (parent/child chunking strategy)
       │
       ▼
-  Embedding (sentence-transformers, all-MiniLM-L6-v2)
+  Embedding (Hugging Face Inference API, all-MiniLM-L6-v2)
       │
       ▼
   ChromaDB (vector storage)
@@ -42,7 +42,7 @@ Document Upload
 └─────────────────────────────┘
       │
       ▼
-  Cross-Encoder Reranking (ms-marco-MiniLM-L-6-v2)
+  Reranking (Cohere Rerank v3.5)
       │
       ▼
   Cited Generation (Groq — Llama 3.3 70B)
@@ -58,7 +58,7 @@ Every request is traced end-to-end with **Langfuse** for observability, and the 
 ## Key features
 
 - **Hybrid retrieval** — combines semantic (vector) search with keyword (BM25) search, fused with Reciprocal Rank Fusion, so both meaning-based and exact-term matches are captured
-- **Cross-encoder reranking** — a second, more precise pass over the retrieval shortlist before generation
+- **Reranking** — a second, more precise relevance pass over the retrieval shortlist before generation
 - **Citation-grounded generation** — answers cite the exact source chunk for every claim; no unverifiable statements
 - **Multi-document support** — upload PDF, DOCX, or TXT files; filter chat to specific documents or search across all of them
 - **Full observability** — every retrieval and generation call traced with Langfuse
@@ -69,18 +69,19 @@ Every request is traced end-to-end with **Langfuse** for observability, and the 
 
 ## Tech stack
 
-| Layer          | Technology                                 |
-| -------------- | ------------------------------------------ |
-| Backend        | Python, FastAPI                            |
-| Embeddings     | sentence-transformers (`all-MiniLM-L6-v2`) |
-| Vector store   | ChromaDB                                   |
-| Keyword search | BM25 (`rank_bm25`)                         |
-| Reranking      | Cross-encoder (`ms-marco-MiniLM-L-6-v2`)   |
-| LLM            | Groq (Llama 3.3 70B)                       |
-| Observability  | Langfuse                                   |
-| Evaluation     | Ragas                                      |
-| Frontend       | Next.js, TypeScript, Tailwind CSS          |
-| File parsing   | pypdf, python-docx                         |
+| Layer          | Technology                                       |
+| -------------- | ------------------------------------------------- |
+| Backend        | Python, FastAPI                                    |
+| Embeddings     | Hugging Face Inference API (`all-MiniLM-L6-v2`)    |
+| Vector store   | ChromaDB                                           |
+| Keyword search | BM25 (`rank_bm25`)                                 |
+| Reranking      | Cohere Rerank (`rerank-v3.5`)                      |
+| LLM            | Groq (Llama 3.3 70B)                               |
+| Observability  | Langfuse                                           |
+| Evaluation     | Ragas                                              |
+| Frontend       | Next.js, TypeScript, Tailwind CSS                  |
+| File parsing   | pypdf, python-docx                                 |
+| Hosting        | Render (backend)                                   |
 
 ---
 
@@ -104,10 +105,10 @@ groundwork-rag/
 ├── groundwork_backend/
 │   ├── main.py              # FastAPI app — /ask, /upload, /documents, /analytics
 │   ├── chunking.py          # Parent/child document chunking
-│   ├── embeddings.py        # Embedding generation
+│   ├── embeddings.py        # Embedding generation (HF Inference API)
 │   ├── vector_store.py      # ChromaDB storage and retrieval
 │   ├── search.py            # Vector search, BM25, RRF, hybrid search
-│   ├── reranker.py          # Cross-encoder reranking
+│   ├── reranker.py          # Reranking (Cohere Rerank API)
 │   ├── generator.py         # Citation-grounded answer generation
 │   ├── extract_text.py      # PDF/DOCX/TXT text extraction
 │   └── evals.py             # Ragas evaluation pipeline
@@ -133,6 +134,8 @@ pip install -r requirements.txt
 
 # Add your API keys to .env:
 # GROQ_API_KEY=...
+# HF_TOKEN=...
+# COHERE_API_KEY=...
 # LANGFUSE_PUBLIC_KEY=...
 # LANGFUSE_SECRET_KEY=...
 # LANGFUSE_HOST=...
@@ -161,7 +164,7 @@ App available at `http://localhost:3000`.
 | `/ask`             | GET    | Ask a question; optional `sources` param to filter by document |
 | `/upload`          | POST   | Upload a PDF/DOCX/TXT file for indexing                        |
 | `/documents`       | GET    | List indexed documents with chunk counts                       |
-| `/analytics/stats` | GET    | Pipeline usage stats (via Langfuse)                            |
+| `/analytics/stats` | GET    | Pipeline usage stats (via Langfuse)                             |
 
 Full interactive documentation at `/docs` (Swagger UI, auto-generated by FastAPI).
 
@@ -169,7 +172,9 @@ Full interactive documentation at `/docs` (Swagger UI, auto-generated by FastAPI
 
 ## Roadmap
 
-- [ ] Production deployment (Vercel + Railway/Render)
+- [x] Production deployment (Render)
+- [ ] Persistent vector storage across deploys (hosted vector DB)
+- [ ] Frontend deployment (Vercel)
 - [ ] Authentication and per-user document isolation
 - [ ] Streaming responses
 - [ ] Support for additional file formats
