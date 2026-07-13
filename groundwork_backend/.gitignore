@@ -12,3 +12,4 @@ build/
 
 # General
 .DS_Store
+chroma_data/

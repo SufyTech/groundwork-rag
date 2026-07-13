@@ -1,4 +1,4 @@
-def chunk_document(text, parent_size=1500, child_size=200, child_overlap=50):
+def chunk_document(text, doc_id="doc", parent_size=1500, child_size=200, child_overlap=50):
     step = child_size - child_overlap
     parent_chunks = []
     i = 0
@@ -6,7 +6,7 @@ def chunk_document(text, parent_size=1500, child_size=200, child_overlap=50):
     while i < len(text):
         end = i + parent_size
         piece = text[i:end]
-        parent_id = f"p{parent_num}"
+        parent_id = f"{doc_id}_p{parent_num}"
         children = []
         j = 0
         child_num = 0

@@ -6,17 +6,18 @@ def embed_text(text: str):
     return embedder.encode(text).tolist()
 
 
-def embed_chunks(parent_chunks):
-    records = []              # blank 1: same idea as chunks/children before — starts as what?
+def embed_chunks(parent_chunks, source="unknown"):
+    records = []
 
     for parent in parent_chunks:
         for child in parent["children"]:
-            vector = embed_text(child["child_text"])   # blank 2: which function turns text into numbers?
-            records.append({                        # blank 3: how do you add to a list?
+            vector = embed_text(child["child_text"])
+            records.append({
                 "id": child["child_id"],
                 "embedding": vector,
                 "text": child["child_text"],
-                "parent_id": child["parent_id"]
+                "parent_id": child["parent_id"],
+                "source": source
             })
 
     return records

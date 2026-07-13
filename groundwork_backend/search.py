@@ -2,7 +2,9 @@ from embeddings import embedder
 from rank_bm25 import BM25Okapi
 from reranker import rerank
 from vector_store import get_chunk_texts
-from rank_bm25 import BM25Okapi
+from langfuse import observe
+from dotenv import load_dotenv
+load_dotenv()
 
 def reciprocal_rank_fusion(vector_results, keyword_results, k=60):
     """
@@ -22,18 +24,19 @@ def reciprocal_rank_fusion(vector_results, keyword_results, k=60):
     sorted_scores = sorted(scores.items(), key=lambda x: x[1], reverse=True)
     return sorted_scores
 
-def vector_search(query_text, collection, top_k=25):
+def vector_search(query_text, collection, top_k=25, where=None):
     """
     query_text: the user's search query
     collection: your ChromaDB collection object
+    where: optional Chroma filter, e.g. {"source": {"$in": ["resume.pdf"]}}
     Returns: list of chunk ids, best vector match first
     """
     query_embedding = embedder.encode(query_text).tolist()
-    results = collection.query(
-        query_embeddings=[query_embedding],
-        n_results=top_k
-    )
-    return results['ids'][0] 
+    query_kwargs = {"query_embeddings": [query_embedding], "n_results": top_k}
+    if where:
+        query_kwargs["where"] = where
+    results = collection.query(**query_kwargs)
+    return results['ids'][0]
 
 def keyword_search(query_text, bm25, ids, top_k=25):
     """
@@ -64,6 +67,7 @@ def hybrid_search(query_text, collection, bm25, ids, top_k=25):
     fused_results = reciprocal_rank_fusion(vector_results, keyword_results)
     return fused_results
 
+@observe()
 def search_and_rerank(query_text, collection, bm25, ids, top_k=5):
     """
     query_text: the user's search query
