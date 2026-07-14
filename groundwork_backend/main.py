@@ -1,7 +1,7 @@
 import os
 import requests as http_requests
 from fastapi import FastAPI, UploadFile, File
-from vector_store import collection, get_chunk_texts, store_records, get_documents
+from vector_store import get_all_chunks, get_chunks_by_sources, get_chunk_texts, store_records, get_documents
 from search import build_bm25_index, search_and_rerank, hybrid_search
 from generator import generate_answer
 from chunking import chunk_document
@@ -35,41 +35,44 @@ bm25 = None
 
 def rebuild_index():
     global all_ids, all_texts, bm25
-    all_data = collection.get()
+    all_data = get_all_chunks()
     all_ids = all_data['ids']
     all_texts = all_data['documents']
     bm25 = build_bm25_index(all_texts) if all_texts else None
 
 rebuild_index()
 
-def safe_doc_id(filename: str) -> str:
-    return re.sub(r"[^a-zA-Z0-9]+", "_", filename).strip("_")
-
 @app.get("/ask")
 def ask(question: str, sources: str = None):
     selected = [s for s in sources.split(",") if s] if sources else None
 
     if selected:
-        where = {"source": {"$in": selected}}
-        filtered = collection.get(where=where)
+        filtered = get_chunks_by_sources(selected)
         filtered_ids = filtered['ids']
         filtered_texts = filtered['documents']
         if not filtered_ids:
             return {"question": question, "answer": "No matching documents found for the selected sources."}
         local_bm25 = build_bm25_index(filtered_texts)
-        fused = hybrid_search(question, collection, local_bm25, filtered_ids)
-        fused = [f for f in fused if f[0] in filtered_ids]
-        pulled_ids = [chunk_id for chunk_id, score in fused][:10]
-        from vector_store import get_chunk_texts as gct
-        from reranker import rerank
-        chunks_text = gct(pulled_ids)
-        reranked = rerank(question, chunks_text, top_k=5)
+        reranked = search_and_rerank(question, local_bm25, filtered_ids, sources=selected)
         answer = generate_answer(question, reranked)
     else:
-        reranked = search_and_rerank(question, collection, bm25, all_ids)
+        reranked = search_and_rerank(question, bm25, all_ids)
         answer = generate_answer(question, reranked)
 
     return {"question": question, "answer": answer}
+
+def safe_doc_id(filename: str) -> str:
+    return re.sub(r"[^a-zA-Z0-9]+", "_", filename).strip("_")
+
+@app.post("/upload")
+async def upload(file: UploadFile = File(...)):
+    file_bytes = await file.read()
+    text = extract_text_from_file(file.filename, file_bytes)
+
+    doc_id = safe_doc_id(file.filename)
+    chunks = chunk_document(text, doc_id=doc_id)
+    records = embed_chunks(chunks, source=file.filename)
+    store_records(records)
 
 @app.get("/documents")
 def documents():

@@ -1,6 +1,6 @@
 fastapi
 uvicorn[standard]
-chromadb
+qdrant-client
 rank_bm25
 groq
 python-dotenv
