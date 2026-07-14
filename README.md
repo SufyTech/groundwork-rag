@@ -15,7 +15,7 @@ Most "chat with your documents" tools give confident-sounding answers with no wa
 
 Built end-to-end — document ingestion, hybrid retrieval, reranking, cited generation, observability, and quantitative evaluation — as a fully working full-stack application, not a notebook demo.
 
-**Live demo:** https://groundwork-rag.onrender.com _(hosted on Render's free tier — first request may take ~30s to wake the server after inactivity)_
+**Live demo:** https://groundwork-rag-one.vercel.app 
 
 ---
 
