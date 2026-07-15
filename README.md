@@ -18,6 +18,39 @@ Built end-to-end — document ingestion, hybrid retrieval, reranking, cited gene
 **Live demo:** https://groundwork-rag-one.vercel.app
 
 ---
+## Engineering Decisions
+
+Building Groundwork end-to-end surfaced a few real production constraints that
+don't show up in a notebook demo:
+
+**Vector storage: ChromaDB → Qdrant Cloud**
+The first version used local ChromaDB for vector storage. On Render's free
+tier, local disk writes don't persist across restarts or redeploys — every
+time the backend redeployed, all indexed documents silently vanished. There
+was no error, no warning, just an empty index on the next request. I
+diagnosed this by comparing document counts before and after a routine
+redeploy, traced it to Render's ephemeral filesystem, and migrated vector
+storage to Qdrant Cloud, which hosts vectors independently of the app server.
+Indexed documents now survive restarts and redeploys with zero data loss.
+
+**Embeddings: in-process model → Hugging Face Inference API**
+Embeddings were originally generated with a locally-loaded
+`sentence-transformers` model. On Render's free tier (512MB RAM), loading the
+model into memory alone exceeded the available limit before a single request
+was even served. Rather than upgrading to a paid tier just to hold a model in
+RAM, I moved embedding generation to the Hugging Face Inference API — the
+model runs on HF's infrastructure, and the backend just makes a lightweight
+API call. This cut the backend's memory footprint enough to run comfortably
+within the free tier.
+
+**Why hybrid search + reranking, not just vector search**
+Pure vector search misses exact keyword and acronym matches that users
+actually type (product codes, names, exact phrases). Adding BM25 keyword
+search and fusing it with vector search via Reciprocal Rank Fusion (RRF)
+catches both semantic and literal matches. A second reranking pass (Cohere
+Rerank v3.5) then re-scores the fused shortlist before generation, which is
+what pushed faithfulness to 1.00 on the evaluated set — reranking removes
+plausible-but-irrelevant chunks that hybrid retrieval alone still lets through.
 
 ## How it works
 
